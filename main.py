@@ -1,11 +1,11 @@
-import random
+import os
 import json
-import yaml
-import os.path
-import xml.etree.ElementTree as ET
+from pick import pick
+import random
+from datetime import datetime
 
-# Initialize our data storage
-# This dictionary 'stats' acts like 6 little boxes to count rolls
+MAX_ROLLS = 50
+
 stats = {
     "rolled_1": 0,
     "rolled_2": 0,
@@ -15,74 +15,49 @@ stats = {
     "rolled_6": 0,
     "total_rolls": 0,
 }
-total_rolls = 0
 
 print("--- Welcome to the Dice Rolling Game ---")
 
-while True:
-    game_start_choice = input(
-        "Press 0 to start a new game\nPress 1 to load JSON-save-file\nPress 2 to load YAML-save-file\nPress 3 to load XML-save-file\n"
-    )
-    if game_start_choice == "0":
-        print("A new Game has been started")
-        break
-    elif game_start_choice == "1":
-        # Populate stats from previous game for json
-        if os.path.exists("data.json"):
-            with open("data.json") as f:
+# Step 2: check for existing Save files
+try:
+    # Ensure the directory exists so listdir doesn't fail
+    if not os.path.exists("save_files"):
+        os.makedirs("save_files")
+
+    save_files = os.listdir("save_files")
+except Exception as e:
+    print("Something went wrong when loading save files: ", e)
+    save_files = []
+
+save_files.append("New game file")
+save_files_prompt = "Choose a save file or start a new game: "
+
+selected_save_file = pick(save_files, save_files_prompt)
+
+
+def load_save_file(save_file_name):
+    try:
+        if save_file_name != "New game file":
+            with open(f"save_files/{save_file_name}", "r") as f:
                 data = json.load(f)
-                stats["rolled_1"] = data["rolled_1"]
-                stats["rolled_2"] = data["rolled_2"]
-                stats["rolled_3"] = data["rolled_3"]
-                stats["rolled_4"] = data["rolled_4"]
-                stats["rolled_5"] = data["rolled_5"]
-                stats["rolled_6"] = data["rolled_6"]
-                total_rolls = data["total_rolls"]
-                print("JSON Save-file has been loaded")
-                break
-        else:
-            print("JSON Save-file does not exist. Starting a new Game")
-            break
-    elif game_start_choice == "2":
-        # Populate stats from previous game from yaml
-        if os.path.exists("data.yaml"):
-            with open("data.yaml") as f:
-                data = yaml.safe_load(f)
-                stats["rolled_1"] = data["rolled_1"]
-                stats["rolled_2"] = data["rolled_2"]
-                stats["rolled_3"] = data["rolled_3"]
-                stats["rolled_4"] = data["rolled_4"]
-                stats["rolled_5"] = data["rolled_5"]
-                stats["rolled_6"] = data["rolled_6"]
-                total_rolls = data["total_rolls"]
-                print("YAML Save-file has been loaded")
-                break
-        else:
-            print("YAML Save-file does not exist. Starting a new Game")
-            break
-    elif game_start_choice == "3":
-        # Populate stats from previous game from XML
-        if os.path.exists("rolls.xml"):
-            tree = ET.parse("rolls.xml")
-            root = tree.getroot()
-            # Conversion to integer required for XML
-            stats["rolled_1"] = int(root.find("rolled_1").text)
-            stats["rolled_2"] = int(root.find("rolled_2").text)
-            stats["rolled_3"] = int(root.find("rolled_3").text)
-            stats["rolled_4"] = int(root.find("rolled_4").text)
-            stats["rolled_5"] = int(root.find("rolled_5").text)
-            stats["rolled_6"] = int(root.find("rolled_6").text)
-            total_rolls = int(root.find("total_rolls").text)
-            break
-        else:
-            print("XML Save-file does not exist. Starting a new Game")
-            break
-    else:
-        print("Enter a valid number")
+    except Exception as e:
+        print("Something went wrong when loading save file: ", e)
+    finally:
+        # stats["rolled_1"] = data["rolled_1"]
+        # stats["rolled_2"] = data["rolled_2"]
+        # stats["rolled_3"] = data["rolled_3"]
+        # stats["rolled_4"] = data["rolled_4"]
+        # stats["rolled_5"] = data["rolled_5"]
+        # stats["rolled_6"] = data["rolled_6"]
+        if save_file_name != "New game file":
+            for element in data:
+                stats[element] = data[element]
 
 
-# Start an loop so the game doesn't close after one roll
-while total_rolls < 50:
+load_save_file(selected_save_file[0])
+
+# Step 3 implement Game logic
+while stats["total_rolls"] < MAX_ROLLS:
     # Pause the code and wait for the user to hit the 'Enter' key
     choice = input(
         "Press Enter to roll the die or type quit to leave the Game: "
@@ -95,10 +70,7 @@ while total_rolls < 50:
     roll = random.randint(1, 6)
 
     # Update our counter: add 1 to the total rolls
-    total_rolls += 1
-
-    # Show the user current roll
-    print(f"You rolled a: {roll}")
+    stats["total_rolls"] += 1
 
     # Update our stats
     if roll == 1:
@@ -114,10 +86,10 @@ while total_rolls < 50:
     if roll == 6:
         stats["rolled_6"] = stats["rolled_6"] + 1
 
-    stats["total_rolls"] = total_rolls
+    stats["total_rolls"] = stats["total_rolls"]
 
     # Display stats
-    print(f"\n--- Current Statistics (Total Rolls: {total_rolls}) ---")
+    print(f"\n--- Current Statistics (Total Rolls: {stats["total_rolls"]}) ---")
 
     print(f"Rolled one: {stats["rolled_1"]} times")
     print(f"Rolled two: {stats["rolled_2"]} times")
@@ -126,48 +98,55 @@ while total_rolls < 50:
     print(f"Rolled five: {stats["rolled_5"]} times")
     print(f"Rolled six: {stats["rolled_6"]} times")
 
-# Reset stats
-if total_rolls == 50:
-    stats["rolled_1"] = 0
-    stats["rolled_2"] = 0
-    stats["rolled_3"] = 0
-    stats["rolled_4"] = 0
-    stats["rolled_5"] = 0
-    stats["rolled_6"] = 0
-    stats["total_rolls"] = 0
+    # Show the user current roll
+    print(f"\nYou rolled a: {roll}")
 
-while True:
-    save_file_choice = input(
-        "\nPress 1 to save as JSON-file\nPress 2 to save as YAML-file\nPress 3 to save as XML-file\n"
-    )
-    if save_file_choice == "1":
-        # Save stats to json file
-        with open("data.json", "w") as f:
+# Step 4 Save progres or result to a new or existing save file
+
+
+def get_current_time_stamp():
+    # 1. Get the current local date and time
+    now = datetime.now()
+
+    # 2. Format it: %Y (Year), %m (Month), %d (Day), %H (Hour), %M (Minute)
+    timestamp = now.strftime("%Y%m%d_%H%M")
+
+    # 3. Create your filename
+    filename = f"save_{timestamp}.json"
+    return filename
+
+
+save_file_prompt = "Rewrite save file or create a new one: "
+save_file_choice = pick(save_files, save_file_prompt)
+
+
+def save_game():
+    if save_file_choice[0] == "New game file":
+        file_path = f"save_files/{get_current_time_stamp()}"
+
+        with open(file_path, "w") as f:
             json.dump(stats, f)
-            break
-    elif save_file_choice == "2":
-        # Save stats to yaml file
-        with open("data.yaml", "w") as f:
-            yaml.dump(stats, f)
-            break
-    elif save_file_choice == "3":
-        # Save stats to XML file
-        root = ET.Element("dice_results")
-        # Build the XML structure from the dictionary
-        for key, value in stats.items():
-            child = ET.SubElement(root, key)
-            child.text = str(value)
-
-        # Create the tree object
-        tree = ET.ElementTree(root)
-
-        # Write to a file
-        # 'encoding="utf-8"' and 'xml_declaration=True' ensure a proper header
-        with open("rolls.xml", "wb") as file:
-            tree.write(file, encoding="utf-8", xml_declaration=True)
-            break
     else:
-        print("Enter a valid number")
+        with open(f"save_files/{save_file_choice[0]}", "r") as f:
+            data = json.load(f)
+
+        for stat in stats:
+            data[stat] = stats[stat]
+
+        with open(f"save_files/{save_file_choice[0]}", "w") as f:
+            json.dump(data, f)
+
+
+save_game()
 
 print("\nYour results have been Saved!")
 print("Thank you for playing :)")
+
+# Step 5 reset initial data and save finished game
+if stats["total_rolls"] == MAX_ROLLS:
+    file_path = f"save_files/{get_current_time_stamp()}"
+    with open(file_path, "w") as f:
+        json.dump(stats, f)
+
+    for element in stats:
+        stats[element] = 0
