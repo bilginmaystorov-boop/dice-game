@@ -65,6 +65,9 @@ if selected_file == "New game file":
     for i in range(player_count):
         name = input(f"Enter name for Player {i+1}: ")
         players.append(Player(name))
+
+    round_count = int(input("Enter number of rounds:"))
+    MAX_ROLLS = round_count
 else:
     with open(os.path.join(SAVE_DIR, selected_file), "r") as f:
         saved_data = json.load(f)
